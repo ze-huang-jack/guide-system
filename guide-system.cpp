@@ -165,7 +165,7 @@ void AddEdge(MatrixGraph &g)
 	{
 		cout << "请输入该套校园道路的第二个景点名称" << endl;
 		cin >> in;
-		p2 = locateSpotPos(g, to);
+		p2 = LocateSpotPos(g, to);
 		if (p2 != -1)
 		{
 			break;
