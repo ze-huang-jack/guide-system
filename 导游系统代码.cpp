@@ -46,7 +46,7 @@ typedef struct
 } AdjGraph;					    	//完整的图邻接表类型
 
 
-void showMenu() {
+void ShowMenu() {
 	cout << "***********************************************" << endl;
 	cout << "       武汉东湖学院校园导游信息系统主菜单   " << endl;   
 	cout << "***********************************************" << endl;
@@ -59,7 +59,7 @@ void showMenu() {
 	cout << "     7  管道系统最优布设              " << endl;        
 	cout << "     0  退出校园导游系统              " << endl;        
 	cout << "***********************************************" << endl;
-	cout << "              请选择(0~7): " << endl;        
+	cout << "          请选择(0~7): " << endl;        
 
 }
 
@@ -79,7 +79,7 @@ void ManaVertexData(MatrixGraph &g) {
 }
 
 // 输入一个景点数据 
-void inOneSpotData(MatrixGraph &g, int i) {
+void InOneSpotData(MatrixGraph &g, int i) {
 	
 	cout << "景点编号（限两个字符）" << endl; 
 	cin >> g.Vexs[i].SpotId;
@@ -94,7 +94,7 @@ void inOneSpotData(MatrixGraph &g, int i) {
 }
 
 // 输入多个景点信息
-void inMultiSpotsData(MatrixGraph &g, int n) {
+void InMultiSpotsData(MatrixGraph &g, int n) {
 	int i;
 	int VexNum = g.VexNum;
 	for(i = 0; i< n; i++) {
@@ -135,7 +135,7 @@ void ManaRoadData(MatrixGraph &g) {
 }
 
 // 增加校园景点交通数据
-vod addEdge(MatrixGraph &g) {
+void AddEdge(MatrixGraph &g) {
 	int p1 = -1;
 	int p2 = -1;
 	char from[20];
@@ -174,7 +174,7 @@ vod addEdge(MatrixGraph &g) {
 
 
 // 删除校园景点交通数据
-void deleteEdge(MatrixGraph &g) {
+void SeleteEdge(MatrixGraph &g) {
 	
 } 
 
@@ -192,17 +192,17 @@ void DispAllEdge(MatrixGraph g) {
 // 4 校园景点信息查询
 
 // 显示一个景点信息 
-void showOneSpotData(MatrixGraph g, int i) {
+void ShowOneSpotData(MatrixGraph g, int i) {
 	cout << "景点编号：" << g.Vexs[i].SpotId << endl; 
 	cout << "景点名称：" << g.Vexs[i].Name << endl; 
 	cout << "景点简介：" << g.Vexs[i].Introduction << endl; 
 } 
 
 // 显示所有景点数据
-void showAllSpotsData(MatrixGraph g) {
+void ShowAllSpotsData(MatrixGraph g) {
 	for(int i = 0; i<g.VexNum; i++) {
 		cout << "武汉东湖学院第" << i + 1 << "个景点信息: " << endl;
-		showOneSpotData(g, i);
+		ShowOneSpotData(g, i);
 	}
 	return;
 } 
@@ -210,7 +210,7 @@ void showAllSpotsData(MatrixGraph g) {
 //校园景点信息查询函数
 void SearchSpotInfor(MatrixGraph g) {
 	
-	locateSpotPos(g, SpotName);
+	LocateSpotPos(g, SpotName);
 } 
 
 // 景点名称定位存储下标的功能
@@ -311,7 +311,7 @@ int main() {
 	MatrixGraph g;
 	int choice = 0;
 	do {
-		showMenu();
+		ShowMenu();
 		cin >> choice;
 		switch(choice) {
 			case 1:
@@ -323,7 +323,7 @@ int main() {
 				cout<< "请输入要输入景点数据的个数" << endl; 
 				int n;
 				cin >> n; 
-				inMultiSpotsData(g, n);
+				InMultiSpotsData(g, n);
 				break;
 			case 3:
 				// 景点交通数据管理
@@ -333,7 +333,7 @@ int main() {
 			case 4:
 				// 校园景点信息查询
 				cout << "校园景点信息查询" << endl;
-				showAllSpotsData(g);
+				ShowAllSpotsData(g);
 				break;
 			case 0:
 				cout << "退出系统" << endl; 
