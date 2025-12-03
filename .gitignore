@@ -1,0 +1,15 @@
+.gitattributes
+.vscode/
+.DS_Store
+*.log
+*.tmp
+build/
+*.o
+*.exe
+*.class
+node_modules/
+dist/
+.env
+*.swp
+.idea/
+*.iml
