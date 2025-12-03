@@ -13,3 +13,4 @@ dist/
 *.swp
 .idea/
 *.iml
+output/
