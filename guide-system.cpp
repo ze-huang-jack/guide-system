@@ -1,358 +1,1054 @@
 #include <iostream>
+#include <iomanip>
+#include <fstream>
+#include <cstring>
+#include <queue>
+#include <vector>
+
 using namespace std;
 
-#define INFINITY 32767 // ∂®“ÂŒﬁ«Ó¥Û
-#define MAXVEXNUM 10   // ◊Ó¥Û∂•µ„∏ˆ ˝
-// “‘œ¬∂®“ÂÕºµƒ¡⁄Ω”æÿ’Û¿‡–Õ
-typedef struct
-{
-	char SpotId[2];			// æ∞µ„±‡∫≈
-	char Name[20];			// æ∞µ„√˚≥∆
-	char Introduction[256]; // æ∞µ„ºÚΩÈ
-} VertexType;				// æ∞µ„¿‡–Õ
+#ifdef INFINITY
+#undef INFINITY
+#endif
+#define INFINITY 32767
+#define MAXVEXNUM 10
 
-typedef struct
-{
-	int u;		// ±ﬂµƒ∆ º∂•µ„
-	int v;		// ±ﬂµƒ÷’÷π∂•µ„
-	int Weight; // ±ﬂµƒ»®÷ÿ
-} EdgeType;		// ±ﬂµƒ¿‡–Õ
+struct VertexType { char SpotId[2]; char Name[20]; char Introduction[256]; };
+struct EdgeType { int u; int v; int Weight; };
+struct MatrixGraph { int VexNum; int EdgeNum; VertexType Vexs[MAXVEXNUM]; int Edges[MAXVEXNUM][MAXVEXNUM]; };
+struct ArcNode { int adjvex; ArcNode *nextarc; int weight; };
+struct VertexNode { VertexType VexData; int count; ArcNode *firstarc; };
+struct AdjGraph { VertexNode adjlist[MAXVEXNUM]; int n; int e; };
 
-typedef struct
-{
-	int VexNum;						 // ∂•µ„ ˝£¨±ﬂ ˝
-	int EdgeNum;					 // ±ﬂ ˝
-	VertexType Vexs[MAXVEXNUM];		 // ¥Ê∑≈∂•µ„–≈œ¢
-	int Edges[MAXVEXNUM][MAXVEXNUM]; // ¡⁄Ω”æÿ’Û ˝◊È
-} MatrixGraph;						 // ÕÍ’˚µƒÕº¡⁄Ω”æÿ’Û¿‡–Õ
+void InitMatrixGraph(MatrixGraph &g);
+void ResetEdgeRow(MatrixGraph &g, int idx);
+void ShowMenu();
+void ManaMapData(MatrixGraph &g);
+void InitSpotsData(MatrixGraph &g);
+bool SaveToMapFile(MatrixGraph g);
+bool LoadFromMapFile(MatrixGraph &g);
+void ManaVertexData(MatrixGraph &g);
+void InOneSpotData(MatrixGraph &g, int i);
+void InMultiSpotsData(MatrixGraph &g, int n);
+void InDeleteSpotsData(MatrixGraph &g);
+void InModifySpotsData(MatrixGraph &g);
+void ManaRoadData(MatrixGraph &g);
+void AddEdge(MatrixGraph &g);
+void SeleteEdge(MatrixGraph &g);
+void ModifyEdge(MatrixGraph &g);
+void DispAllEdge(MatrixGraph g);
+void ShowOneSpotData(MatrixGraph g, int i);
+void ShowAllSpotsData(MatrixGraph g);
+void SearchSpotInfor(MatrixGraph g);
+int LocateSpotPos(MatrixGraph g, const char SpotName[]);
+void VisitPathPlan(MatrixGraph &g);
+bool MatrixToAdjList(MatrixGraph g, AdjGraph *&G);
+void DispAdj(AdjGraph *G);
+void DFS(AdjGraph *G, int v);
+void DFSInternal(AdjGraph *G, int v, bool visited[]);
+void BFS(AdjGraph *G, int v);
+void DestroyAdj(AdjGraph *&G);
+void ShortestPathQuery(MatrixGraph g);
+void Dijkstra(MatrixGraph g, int v);
+void Disppath(MatrixGraph g, int dist[], int path[], int S[], int v);
+void Floyd(MatrixGraph g);
+void Dispath(MatrixGraph g, int A[][MAXVEXNUM], int path[][MAXVEXNUM]);
+void PrintFloydPath(MatrixGraph g, int path[][MAXVEXNUM], int i, int j);
+void PipelineSystemOptimal(MatrixGraph g);
+void Prim(MatrixGraph g, int v);
+void Kruskal(MatrixGraph g);
+void BubbleSort(EdgeType R[], int n);
+int CountEdges(MatrixGraph g);
 
-// “‘œ¬∂®“Â¡⁄Ω”±Ì¿‡–Õ
-
-typedef struct ANode
+void InitMatrixGraph(MatrixGraph &g)
 {
-	int adjvex;			   // ∏√±ﬂµƒ¡⁄Ω”µ„±‡∫≈
-	struct ANode *nextarc; // ÷∏œÚœ¬“ªÃı±ﬂµƒ÷∏’Î
-	int weight;			   // ∏√±ﬂµƒœ‡πÿ–≈œ¢£¨»Á»®÷µ£®”√’˚–Õ±Ì æ£©
-} ArcNode;				   // ±ﬂΩ⁄µ„¿‡–Õ
+	g.VexNum = 0;
+	g.EdgeNum = 0;
+	for (int i = 0; i < MAXVEXNUM; i++)
+	{
+		memset(g.Vexs[i].SpotId, 0, sizeof(g.Vexs[i].SpotId));
+		memset(g.Vexs[i].Name, 0, sizeof(g.Vexs[i].Name));
+		memset(g.Vexs[i].Introduction, 0, sizeof(g.Vexs[i].Introduction));
+		for (int j = 0; j < MAXVEXNUM; j++)
+		{
+			g.Edges[i][j] = (i == j ? 0 : INFINITY);
+		}
+	}
+}
 
-typedef struct Vnode
+void ResetEdgeRow(MatrixGraph &g, int idx)
 {
-	VertexType VexData; // ∂•µ„ ˝æ›
-	int count;			// ¥Ê∑≈∂•µ„»Î∂»,ΩˆΩˆ”√”⁄Õÿ∆À≈≈–Ú
-	ArcNode *firstarc;	// ÷∏œÚµ⁄“ªÃı±ﬂ
-} VertexNode;			// ¡⁄Ω”±ÌÕ∑Ω⁄µ„¿‡–Õ
-
-typedef struct
-{
-	VertexNode adjlist[MAXVEXNUM]; // ¡⁄Ω”±ÌÕ∑Ω⁄µ„ ˝◊È
-	int n, e;					   // Õº÷–∂•µ„ ˝n∫Õ±ﬂ ˝e
-} AdjGraph;						   // ÕÍ’˚µƒÕº¡⁄Ω”±Ì¿‡–Õ
+	for (int j = 0; j < MAXVEXNUM; j++)
+	{
+		if (j == idx)
+		{
+			g.Edges[idx][j] = 0;
+		}
+		else
+		{
+			g.Edges[idx][j] = INFINITY;
+			g.Edges[j][idx] = INFINITY;
+		}
+	}
+}
 
 void ShowMenu()
 {
-	cout << "***********************************************" << endl;
-	cout << "       Œ‰∫∫∂´∫˛—ß‘∫–£‘∞µº”Œ–≈œ¢œµÕ≥÷˜≤Àµ•   " << endl;
-	cout << "***********************************************" << endl;
-	cout << " 	  1  æ∞µ„µÿÕº’˚ÃÂπ‹¿Ì " << endl;
-	cout << "     2  –£‘∞æ∞µ„ ˝æ›π‹¿Ì          " << endl;
-	cout << "     3  æ∞µ„ΩªÕ® ˝æ›π‹¿Ì          " << endl;
-	cout << "     4  –£‘∞æ∞µ„–≈œ¢≤È—Ø             " << endl;
-	cout << "     5  ”Œ¿¿œﬂ¬∑≤È—ØπÊªÆ          " << endl;
-	cout << "     6  æ∞µ„◊Ó∂Ã¬∑æ∂≤È—Ø             " << endl;
-	cout << "     7  π‹µ¿œµÕ≥◊Ó”≈≤º…Ë              " << endl;
-	cout << "     0  ÕÀ≥ˆ–£‘∞µº”ŒœµÕ≥              " << endl;
-	cout << "***********************************************" << endl;
-	cout << "          «Î—°‘Ò(0~7): " << endl;
+	static const char *lines[] = {"***********************************************", "       Ê≠¶Ê±â‰∏úÊπñÂ≠¶Èô¢Ê†°Âõ≠ÂØºÊ∏∏‰ø°ÊÅØÁ≥ªÁªü‰∏ªËèúÂçï       ", "***********************************************", "     1  ÊôØÁÇπÂú∞ÂõæÊï¥‰ΩìÁÆ°ÁêÜ                        ", "     2  Ê†°Âõ≠ÊôØÁÇπÊï∞ÊçÆÁÆ°ÁêÜ                        ", "     3  ÊôØÁÇπ‰∫§ÈÄöÊï∞ÊçÆÁÆ°ÁêÜ                        ", "     4  Ê†°Âõ≠ÊôØÁÇπ‰ø°ÊÅØÊü•ËØ¢                        ", "     5  Ê∏∏ËßàÁ∫øË∑ØÊü•ËØ¢ËßÑÂàí                        ", "     6  ÊôØÁÇπÊúÄÁü≠Ë∑ØÂæÑÊü•ËØ¢                        ", "     7  ÁÆ°ÈÅìÁ≥ªÁªüÊúÄ‰ºòÂ∏ÉËÆæ                        ", "     0  ÈÄÄÂá∫Ê†°Âõ≠ÂØºÊ∏∏Á≥ªÁªü                        ", "***********************************************"};
+	for (const char *line : lines) { cout << line << endl; }
+	cout << "             ËØ∑ËæìÂÖ•ÂäüËÉΩÁºñÂè∑(0~7): ";
 }
 
-// 2 –£‘∞æ∞µ„ ˝æ›π‹¿Ì
+void ManaMapData(MatrixGraph &g)
+{
+	int choice = -1;
+	do
+	{
+		static const char *menu[] = {"&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&", "        Ê†°Âõ≠ÊôØÁÇπÂú∞ÂõæÊï¥‰ΩìÊï∞ÊçÆÁÆ°ÁêÜ   ", "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&", " 1 ÂàùÂßãÂåñÊôØÁÇπÂú∞ÂõæÊï∞ÊçÆ               ", " 2 ‰øùÂ≠òÊôØÁÇπÂú∞ÂõæÊï∞ÊçÆ                 ", " 3 ËØªÂèñÊôØÁÇπÂú∞ÂõæÊï∞ÊçÆ                 ", " 0 ËøîÂõû‰∏ªËèúÂçï                       ", "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&"};
+		for (const char *line : menu) { cout << line << endl; }
+		cout << "ËØ∑ÈÄâÊã©: ";
+		cin >> choice;
+		switch (choice)
+		{
+		case 1: InitSpotsData(g); break;
+		case 2: cout << (SaveToMapFile(g) ? "ÊôØÁÇπÂú∞ÂõæÊï∞ÊçÆ‰øùÂ≠òÊàêÂäü„ÄÇ" : "ÊôØÁÇπÂú∞ÂõæÊï∞ÊçÆ‰øùÂ≠òÂ§±Ë¥•ÔºåËØ∑Ê£ÄÊü•Êñá‰ª∂ÊùÉÈôê„ÄÇ") << endl; break;
+		case 3: cout << (LoadFromMapFile(g) ? "ÊôØÁÇπÂú∞ÂõæÊï∞ÊçÆËØªÂèñÊàêÂäü„ÄÇ" : "ÊôØÁÇπÂú∞ÂõæÊï∞ÊçÆËØªÂèñÂ§±Ë¥•ÔºåÂΩìÂâçÂèØËÉΩÊ≤°Êúâ‰øùÂ≠òÊñá‰ª∂„ÄÇ") << endl; break;
+		case 0: cout << "ËøîÂõû‰∏ªËèúÂçï„ÄÇ" << endl; break;
+		default: cout << "ÂäüËÉΩÁºñÂè∑Êó†ÊïàÔºåËØ∑ÈáçÊñ∞ÈÄâÊã©„ÄÇ" << endl; break;
+		}
+	} while (choice != 0);
+}
 
-// œ‘ æ°∞–£‘∞æ∞µ„ ˝æ›π‹¿Ì°±≤Àµ•ΩÁ√Ê
+void InitSpotsData(MatrixGraph &g)
+{
+	InitMatrixGraph(g);
+	cout << "Â∑≤ÂÆåÊàêÁ≥ªÁªüÂàùÂßãÂåñÔºåÂèØÂºÄÂßãÂΩïÂÖ•ÊôØÁÇπ‰ø°ÊÅØ„ÄÇ" << endl;
+}
+
+bool SaveToMapFile(MatrixGraph g)
+{
+	ofstream ofs("CampusSpotsData.dat", ios::binary | ios::out);
+	if (!ofs) { return false; }
+	ofs.write(reinterpret_cast<char *>(&g), sizeof(MatrixGraph));
+	return true;
+}
+
+bool LoadFromMapFile(MatrixGraph &g)
+{
+	ifstream ifs("CampusSpotsData.dat", ios::binary | ios::in);
+	if (!ifs) { return false; }
+	ifs.read(reinterpret_cast<char *>(&g), sizeof(MatrixGraph));
+	return true;
+}
+
 void ManaVertexData(MatrixGraph &g)
 {
-	cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << endl;
-	cout << "–£‘∞æ∞µ„µÿÕº’˚ÃÂ ˝æ›π‹¿Ì        " << endl;
-	cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << endl;
-	cout << "      1 ≥ı ºªØæ∞µ„µÿÕº ˝æ› " << endl;
-	cout << "      2 ±£¥Êæ∞µ„µÿÕº ˝æ› " << endl;
-	cout << "      3 ∂¡»°æ∞µ„µÿÕº ˝æ› " << endl;
-	cout << "		0  ∑µªÿ÷˜≤Àµ• " << endl;
-	cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&" << endl;
+	int choice = -1;
+	do
+	{
+		static const char *menu[] = {"============================================", "               Ê†°Âõ≠ÊôØÁÇπÊï∞ÊçÆÁÆ°ÁêÜ             ", "============================================", " 1 Â¢ûÂä†ÊôØÁÇπÊï∞ÊçÆ                               ", " 2 Âà†Èô§ÊôØÁÇπÊï∞ÊçÆ                               ", " 3 ‰øÆÊîπÊôØÁÇπÊï∞ÊçÆ                               ", " 4 ÊòæÁ§∫ÊôØÁÇπÊï∞ÊçÆ                               ", " 0 ËøîÂõû‰∏ªËèúÂçï                                 ", "============================================"};
+		for (const char *line : menu) { cout << line << endl; }
+		cout << "ËØ∑ÈÄâÊã©: ";
+		cin >> choice;
+		switch (choice)
+		{
+		case 1:
+		{
+			int remain = MAXVEXNUM - g.VexNum;
+			if (remain <= 0)
+			{
+				cout << "ÊôØÁÇπÂÆπÈáèÂ∑≤Êª°ÔºåÊó†Ê≥ïÁªßÁª≠Ê∑ªÂä†„ÄÇ" << endl;
+				break;
+			}
+			cout << "ÂΩìÂâçÂèØÂÜçÊ∑ªÂä†ÁöÑÊôØÁÇπÊï∞Èáè‰∏∫ " << remain << "ÔºåËØ∑ËæìÂÖ•ÈúÄË¶ÅÊñ∞Â¢ûÁöÑÊï∞Èáè: ";
+			int n;
+			cin >> n;
+			if (n <= 0 || n > remain)
+			{
+				cout << "ËæìÂÖ•Êï∞ÈáèË∂ÖÂá∫ÈôêÂà∂„ÄÇ" << endl;
+			}
+			else
+			{
+				InMultiSpotsData(g, n);
+			}
+			break;
+		}
+		case 2: InDeleteSpotsData(g); break;
+		case 3: InModifySpotsData(g); break;
+		case 4: ShowAllSpotsData(g); break;
+		case 0: cout << "ËøîÂõû‰∏ªËèúÂçï„ÄÇ" << endl; break;
+		default: cout << "ÂäüËÉΩÁºñÂè∑Êó†Êïà„ÄÇ" << endl; break;
+		}
+	} while (choice != 0);
 }
 
-//  ‰»Î“ª∏ˆæ∞µ„ ˝æ›
 void InOneSpotData(MatrixGraph &g, int i)
 {
-
-	cout << "æ∞µ„±‡∫≈£®œﬁ¡Ω∏ˆ◊÷∑˚£©" << endl;
-	cin >> g.Vexs[i].SpotId;
-
-	cout << "æ∞µ„√˚≥∆£®œ»10∏ˆ∫∫◊”£©" << endl;
-	cin >> g.Vexs[i].Name;
-
-	cout << "æ∞µ„ºÚΩÈ£®œ»128∏ˆ∫∫◊”£©" << endl;
-	cin >> g.Vexs[i].Introduction;
-
-	return;
+	char buffer[256];
+	cout << "ËØ∑ËæìÂÖ•ÊôØÁÇπÁºñÂè∑(ÂçïÂ≠óÁ¨¶Âç≥ÂèØ): ";
+	cin >> buffer;
+	g.Vexs[i].SpotId[0] = buffer[0];
+	g.Vexs[i].SpotId[1] = '\0';
+	cout << "ËØ∑ËæìÂÖ•ÊôØÁÇπÂêçÁß∞(‰∏çÂê´Á©∫Ê†ºÔºå<=19Â≠óÁ¨¶): ";
+	cin >> setw(20) >> g.Vexs[i].Name;
+	cout << "ËØ∑ËæìÂÖ•ÊôØÁÇπÁÆÄ‰ªã(‰∏çÂê´Á©∫Ê†ºÔºå<=255Â≠óÁ¨¶): ";
+	cin >> setw(256) >> g.Vexs[i].Introduction;
+	ResetEdgeRow(g, i);
 }
 
-//  ‰»Î∂‡∏ˆæ∞µ„–≈œ¢
 void InMultiSpotsData(MatrixGraph &g, int n)
 {
-	int i;
-	int VexNum = g.VexNum;
-	for (i = 0; i < n; i++)
+	int start = g.VexNum;
+	for (int i = 0; i < n; i++)
 	{
-		cout << "«Î ‰»Îµ⁄" << VexNum + i + 1 << "∏ˆæ∞µ„ ˝æ›" << endl;
-		inOneSpotData(g, VexNum + i);
+		if (start + i >= MAXVEXNUM)
+		{
+			cout << "ËææÂà∞ÊúÄÂ§ßÂÆπÈáèÔºåÂÅúÊ≠¢ÂΩïÂÖ•„ÄÇ" << endl;
+			break;
+		}
+		cout << "---- ËæìÂÖ•Á¨¨ " << start + i + 1 << " ‰∏™ÊôØÁÇπ‰ø°ÊÅØ ----" << endl;
+		InOneSpotData(g, start + i);
 	}
 	g.VexNum += n;
-	return;
-}
-
-// …æ≥˝“ª∏ˆæ∞µ„œ˚œ¢
-void InDeleteSpotsData(MatrixGraph &g)
-{
-}
-
-// –ﬁ∏ƒæ∞µ„–≈œ¢
-void InModifySpotsData(MatrixGraph &g)
-{
-}
-
-// 3 –£‘∞æ∞µ„ΩªÕ® ˝æ›π‹¿Ì
-void ManaRoadData(MatrixGraph &g)
-{
-	int n, select;
-	do
+	if (g.VexNum > MAXVEXNUM)
 	{
-		cout << " ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-		cout << "               –£‘∞æ∞µ„ΩªÕ® ˝æ›π‹¿Ì         " << endl;
-		cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
-		cout << "               1  ‘ˆº”æ∞µ„ΩªÕ® ˝æ›           " << endl;
-		cout << "              2  …æ≥˝æ∞µ„ΩªÕ® ˝æ›           " << endl;
-		cout << "             3  –ﬁ∏ƒæ∞µ„ΩªÕ® ˝æ›           " << endl;
-		cout << "             4  œ‘ ææ∞µ„ΩªÕ® ˝æ›          " << endl;
-		cout << "            0   ∑µªÿ÷˜≤Àµ•                " << endl;
-		cout << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~" << endl;
+		g.VexNum = MAXVEXNUM;
 	}
 }
 
-// ‘ˆº”–£‘∞æ∞µ„ΩªÕ® ˝æ›
+void InDeleteSpotsData(MatrixGraph &g)
+{
+	if (g.VexNum == 0)
+	{
+		cout << "ÊöÇÊó†ÊôØÁÇπÔºåÊó†Ê≥ïÂà†Èô§„ÄÇ" << endl;
+		return;
+	}
+	char name[20];
+	cout << "ËØ∑ËæìÂÖ•Ë¶ÅÂà†Èô§ÁöÑÊôØÁÇπÂêçÁß∞: ";
+	cin >> setw(20) >> name;
+	int pos = LocateSpotPos(g, name);
+	if (pos == -1)
+	{
+		cout << "Êú™ÊâæÂà∞ÊåáÂÆöÊôØÁÇπ„ÄÇ" << endl;
+		return;
+	}
+	for (int i = pos; i < g.VexNum - 1; i++)
+	{
+		g.Vexs[i] = g.Vexs[i + 1];
+		for (int j = 0; j < g.VexNum; j++)
+		{
+			g.Edges[i][j] = g.Edges[i + 1][j];
+		}
+	}
+	for (int i = 0; i < g.VexNum - 1; i++)
+	{
+		for (int j = pos; j < g.VexNum - 1; j++)
+		{
+			g.Edges[i][j] = g.Edges[i][j + 1];
+		}
+	}
+	g.VexNum--;
+	g.EdgeNum = CountEdges(g);
+	cout << "ÊôØÁÇπÂà†Èô§ÊàêÂäü„ÄÇ" << endl;
+}
+
+void InModifySpotsData(MatrixGraph &g)
+{
+	if (g.VexNum == 0)
+	{
+		cout << "ÊöÇÊó†ÊôØÁÇπÊï∞ÊçÆÂèØ‰øÆÊîπ„ÄÇ" << endl;
+		return;
+	}
+	char name[20];
+	cout << "ËØ∑ËæìÂÖ•Ë¶Å‰øÆÊîπÁöÑÊôØÁÇπÂêçÁß∞: ";
+	cin >> setw(20) >> name;
+	int pos = LocateSpotPos(g, name);
+	if (pos == -1)
+	{
+		cout << "Êú™ÊâæÂà∞ÊåáÂÆöÊôØÁÇπ„ÄÇ" << endl;
+		return;
+	}
+	cout << "ÂΩìÂâçÊôØÁÇπ‰ø°ÊÅØÂ¶Ç‰∏ã:" << endl;
+	ShowOneSpotData(g, pos);
+	cout << "ËØ∑ÈáçÊñ∞ÂΩïÂÖ•ËØ•ÊôØÁÇπ‰ø°ÊÅØ„ÄÇ" << endl;
+	InOneSpotData(g, pos);
+}
+
+void ManaRoadData(MatrixGraph &g)
+{
+	int choice = -1;
+	do
+	{
+		static const char *menu[] = {"~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", "             Ê†°Âõ≠ÊôØÁÇπ‰∫§ÈÄöÊï∞ÊçÆÁÆ°ÁêÜ               ", "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", " 1 Â¢ûÂä†ÊôØÁÇπ‰∫§ÈÄöÊï∞ÊçÆ                             ", " 2 Âà†Èô§ÊôØÁÇπ‰∫§ÈÄöÊï∞ÊçÆ                             ", " 3 ‰øÆÊîπÊôØÁÇπ‰∫§ÈÄöÊï∞ÊçÆ                             ", " 4 ÊòæÁ§∫ÊôØÁÇπ‰∫§ÈÄöÊï∞ÊçÆ                             ", " 0 ËøîÂõû‰∏ªËèúÂçï                                   ", "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"};
+		for (const char *line : menu) { cout << line << endl; }
+		cout << "ËØ∑ÈÄâÊã©: ";
+		cin >> choice;
+		switch (choice)
+		{
+		case 1: AddEdge(g); break;
+		case 2: SeleteEdge(g); break;
+		case 3: ModifyEdge(g); break;
+		case 4: DispAllEdge(g); break;
+		case 0: cout << "ËøîÂõû‰∏ªËèúÂçï„ÄÇ" << endl; break;
+		default: cout << "ÂäüËÉΩÁºñÂè∑Êó†Êïà„ÄÇ" << endl; break;
+		}
+	} while (choice != 0);
+}
+
 void AddEdge(MatrixGraph &g)
 {
-	int p1 = -1;
-	int p2 = -1;
+	if (g.VexNum < 2)
+	{
+		cout << "Ëá≥Â∞ëÈúÄË¶Å‰∏§‰∏™ÊôØÁÇπÊâçËÉΩÊ∑ªÂä†Ë∑ØÂæÑ„ÄÇ" << endl;
+		return;
+	}
 	char from[20];
 	char to[20];
-
-	do
+	cout << "ËØ∑ËæìÂÖ•Ë∑ØÂæÑËµ∑ÁÇπÊôØÁÇπÂêçÁß∞: ";
+	cin >> setw(20) >> from;
+	int p1 = LocateSpotPos(g, from);
+	if (p1 == -1)
 	{
-		cout << "«Î ‰»Î∏√Ã◊–£‘∞µ¿¬∑µƒµ⁄“ª∏ˆæ∞µ„√˚≥∆" << endl;
-		cin >> from;
-		p1 = locateSpotPos(g, from); //
-		if (p1 != -1)
-		{
-			break;
-		}
-		else
-		{
-			cout << "‘⁄–£‘∞µÿÕº÷–Œ¥’“µΩæ∞µ„√˚≥∆Œ™ " << from << " µƒæ∞µ„£°" << endl;
-		}
-	} while (p1 == -1);
-
-	do
+		cout << "Êú™ÊâæÂà∞Ëµ∑ÁÇπÊôØÁÇπ„ÄÇ" << endl;
+		return;
+	}
+	cout << "ËØ∑ËæìÂÖ•Ë∑ØÂæÑÁªàÁÇπÊôØÁÇπÂêçÁß∞: ";
+	cin >> setw(20) >> to;
+	int p2 = LocateSpotPos(g, to);
+	if (p2 == -1)
 	{
-		cout << "«Î ‰»Î∏√Ã◊–£‘∞µ¿¬∑µƒµ⁄∂˛∏ˆæ∞µ„√˚≥∆" << endl;
-		cin >> in;
-		p2 = LocateSpotPos(g, to);
-		if (p2 != -1)
-		{
-			break;
-		}
-		else
-		{
-			cout << "‘⁄–£‘∞µÿÕº÷–Œ¥’“µΩæ∞µ„√˚≥∆Œ™ " << to << " µƒæ∞µ„£°" << endl;
-		}
-	} while (p2 == -1);
-
-	cout << "«Î ‰»Î¥” " << from << " µΩ " << to << " £¨ ∏√Ãı–£‘∞æ∞µ„µ¿¬∑µƒ¿Ô≥Ã£∫ " << endl;
-	cin >> g.Edges[p1][p2];
-	g.Edges[p2][p1] = g.Edges[p1][p2];
-	g.EdgeNum++;
-	cout << "¥” " << from << " µΩ " << to << " £¨ æ∞µ„µ¿¬∑µƒ¿Ô≥ÃŒ™ " << g.Edges[p1][p2] << "µƒµ¿¬∑ÃÌº”≥…π¶£°" << endl;
-	return;
+		cout << "Êú™ÊâæÂà∞ÁªàÁÇπÊôØÁÇπ„ÄÇ" << endl;
+		return;
+	}
+	if (p1 == p2)
+	{
+		cout << "Ëµ∑ÁÇπÂíåÁªàÁÇπ‰∏çËÉΩÁõ∏Âêå„ÄÇ" << endl;
+		return;
+	}
+	cout << "ËØ∑ËæìÂÖ•Ë∑ØÂæÑÊùÉÂÄº(Ê≠£Êï¥Êï∞): ";
+	int w;
+	cin >> w;
+	if (w <= 0)
+	{
+		cout << "ÊùÉÂÄºÂøÖÈ°ª‰∏∫Ê≠£Êï¥Êï∞„ÄÇ" << endl;
+		return;
+	}
+	g.Edges[p1][p2] = w;
+	g.Edges[p2][p1] = w;
+	g.EdgeNum = CountEdges(g);
+	cout << "Ë∑ØÂæÑÊ∑ªÂä†ÊàêÂäü„ÄÇ" << endl;
 }
 
-// …æ≥˝–£‘∞æ∞µ„ΩªÕ® ˝æ›
 void SeleteEdge(MatrixGraph &g)
 {
+	if (g.VexNum < 2)
+	{
+		cout << "ÊöÇÊó†Ë∑ØÂæÑÂèØÂà†Èô§„ÄÇ" << endl;
+		return;
+	}
+	char from[20];
+	char to[20];
+	cout << "ËØ∑ËæìÂÖ•Ë¶ÅÂà†Èô§Ë∑ØÂæÑÁöÑËµ∑ÁÇπ: ";
+	cin >> setw(20) >> from;
+	int p1 = LocateSpotPos(g, from);
+	if (p1 == -1)
+	{
+		cout << "Êú™ÊâæÂà∞Ëµ∑ÁÇπÊôØÁÇπ„ÄÇ" << endl;
+		return;
+	}
+	cout << "ËØ∑ËæìÂÖ•Ë¶ÅÂà†Èô§Ë∑ØÂæÑÁöÑÁªàÁÇπ: ";
+	cin >> setw(20) >> to;
+	int p2 = LocateSpotPos(g, to);
+	if (p2 == -1)
+	{
+		cout << "Êú™ÊâæÂà∞ÁªàÁÇπÊôØÁÇπ„ÄÇ" << endl;
+		return;
+	}
+	if (g.Edges[p1][p2] == INFINITY)
+	{
+		cout << "‰∏§ÊôØÁÇπ‰πãÈó¥Â∞öÊú™Âª∫Á´ãË∑ØÂæÑ„ÄÇ" << endl;
+		return;
+	}
+	g.Edges[p1][p2] = INFINITY;
+	g.Edges[p2][p1] = INFINITY;
+	g.EdgeNum = CountEdges(g);
+	cout << "Ë∑ØÂæÑÂà†Èô§ÊàêÂäü„ÄÇ" << endl;
 }
 
-// –ﬁ∏ƒæ∞µ„ΩªÕ® ˝æ›
 void ModifyEdge(MatrixGraph &g)
 {
+	if (g.VexNum < 2)
+	{
+		cout << "ÊöÇÊó†Ë∑ØÂæÑÂèØ‰øÆÊîπ„ÄÇ" << endl;
+		return;
+	}
+	char from[20];
+	char to[20];
+	cout << "ËØ∑ËæìÂÖ•Ë¶Å‰øÆÊîπË∑ØÂæÑÁöÑËµ∑ÁÇπ: ";
+	cin >> setw(20) >> from;
+	int p1 = LocateSpotPos(g, from);
+	if (p1 == -1)
+	{
+		cout << "Êú™ÊâæÂà∞Ëµ∑ÁÇπ„ÄÇ" << endl;
+		return;
+	}
+	cout << "ËØ∑ËæìÂÖ•Ë¶Å‰øÆÊîπË∑ØÂæÑÁöÑÁªàÁÇπ: ";
+	cin >> setw(20) >> to;
+	int p2 = LocateSpotPos(g, to);
+	if (p2 == -1)
+	{
+		cout << "Êú™ÊâæÂà∞ÁªàÁÇπ„ÄÇ" << endl;
+		return;
+	}
+	if (g.Edges[p1][p2] == INFINITY)
+	{
+		cout << "‰∏§ÊôØÁÇπ‰πãÈó¥Â∞öÊó†Ë∑ØÂæÑÔºåËØ∑ÂÖàÊ∑ªÂä†„ÄÇ" << endl;
+		return;
+	}
+	cout << "ËØ∑ËæìÂÖ•Êñ∞ÁöÑÊùÉÂÄº: ";
+	int w;
+	cin >> w;
+	if (w <= 0)
+	{
+		cout << "ÊùÉÂÄºÂøÖÈ°ª‰∏∫Ê≠£Êï¥Êï∞„ÄÇ" << endl;
+		return;
+	}
+	g.Edges[p1][p2] = w;
+	g.Edges[p2][p1] = w;
+	cout << "Ë∑ØÂæÑÊùÉÂÄº‰øÆÊîπÊàêÂäü„ÄÇ" << endl;
 }
 
-//  œ‘ æÀ˘”–æ∞µ„ΩªÕ® ˝æ›
 void DispAllEdge(MatrixGraph g)
 {
+	if (g.EdgeNum == 0)
+	{
+		cout << "ÂΩìÂâçÂú∞ÂõæÊó†‰ªª‰ΩïË∑ØÂæÑÊï∞ÊçÆ„ÄÇ" << endl;
+		return;
+	}
+	cout << left << setw(15) << "Ëµ∑ÁÇπ" << left << setw(15) << "ÁªàÁÇπ" << left << setw(10) << "ÊùÉÂÄº" << endl;
+	cout << "----------------------------------------------" << endl;
+	for (int i = 0; i < g.VexNum; i++)
+	{
+		for (int j = i + 1; j < g.VexNum; j++)
+		{
+			if (g.Edges[i][j] != INFINITY && g.Edges[i][j] > 0)
+			{
+				cout << left << setw(15) << g.Vexs[i].Name << left << setw(15) << g.Vexs[j].Name << left << setw(10) << g.Edges[i][j] << endl;
+			}
+		}
+	}
 }
 
-// 4 –£‘∞æ∞µ„–≈œ¢≤È—Ø
-
-// œ‘ æ“ª∏ˆæ∞µ„–≈œ¢
 void ShowOneSpotData(MatrixGraph g, int i)
 {
-	cout << "æ∞µ„±‡∫≈£∫" << g.Vexs[i].SpotId << endl;
-	cout << "æ∞µ„√˚≥∆£∫" << g.Vexs[i].Name << endl;
-	cout << "æ∞µ„ºÚΩÈ£∫" << g.Vexs[i].Introduction << endl;
+	cout << "ÊôØÁÇπÁºñÂè∑: " << g.Vexs[i].SpotId << endl;
+	cout << "ÊôØÁÇπÂêçÁß∞: " << g.Vexs[i].Name << endl;
+	cout << "ÊôØÁÇπÁÆÄ‰ªã: " << g.Vexs[i].Introduction << endl;
 }
 
-// œ‘ æÀ˘”–æ∞µ„ ˝æ›
 void ShowAllSpotsData(MatrixGraph g)
+{
+	if (g.VexNum == 0)
+	{
+		cout << "ÊöÇÊó†ÊôØÁÇπ‰ø°ÊÅØÂèØÂ±ïÁ§∫„ÄÇ" << endl;
+		return;
+	}
+	for (int i = 0; i < g.VexNum; i++)
+	{
+		cout << "----------------------------------------" << endl;
+		cout << "Á¨¨ " << i + 1 << " ‰∏™ÊôØÁÇπ‰ø°ÊÅØ" << endl;
+		ShowOneSpotData(g, i);
+	}
+	cout << "----------------------------------------" << endl;
+}
+
+void SearchSpotInfor(MatrixGraph g)
+{
+	if (g.VexNum == 0)
+	{
+		cout << "ÊöÇÊó†ÊôØÁÇπÂèØÊü•ËØ¢„ÄÇ" << endl;
+		return;
+	}
+	char name[20];
+	cout << "ËØ∑ËæìÂÖ•Ë¶ÅÊü•ËØ¢ÁöÑÊôØÁÇπÂêçÁß∞: ";
+	cin >> setw(20) >> name;
+	int pos = LocateSpotPos(g, name);
+	if (pos == -1)
+	{
+		cout << "Êú™ÊâæÂà∞ËØ•ÊôØÁÇπ„ÄÇ" << endl;
+	}
+	else
+	{
+		ShowOneSpotData(g, pos);
+	}
+}
+
+int LocateSpotPos(MatrixGraph g, const char SpotName[])
 {
 	for (int i = 0; i < g.VexNum; i++)
 	{
-		cout << "Œ‰∫∫∂´∫˛—ß‘∫µ⁄" << i + 1 << "∏ˆæ∞µ„–≈œ¢: " << endl;
-		ShowOneSpotData(g, i);
+		if (strcmp(g.Vexs[i].Name, SpotName) == 0)
+		{
+			return i;
+		}
 	}
-	return;
+	return -1;
 }
 
-// –£‘∞æ∞µ„–≈œ¢≤È—Ø∫Ø ˝
-void SearchSpotInfor(MatrixGraph g)
-{
-
-	LocateSpotPos(g, SpotName);
-}
-
-// æ∞µ„√˚≥∆∂®Œª¥Ê¥¢œ¬±Íµƒπ¶ƒ‹
-int locateSpotPos(MatrixGraph g, char SpotName[])
-{
-}
-
-// 5  ”Œ¿¿œﬂ¬∑≤È—ØπÊªÆ
-
-// æ∞µ„ΩªÕ® ˝æ›π‹¿Ì∫Ø ˝
 void VisitPathPlan(MatrixGraph &g)
 {
-
-	MatrixToAdjList(g, G);
-	//	—È÷§¥¥Ω®¡⁄Ω”±Ì «∑Ò≥…π¶
+	if (g.VexNum == 0)
+	{
+		cout << "ËØ∑ÂÖàÂΩïÂÖ•ÊôØÁÇπÊï∞ÊçÆ„ÄÇ" << endl;
+		return;
+	}
+	AdjGraph *G = nullptr;
+	if (!MatrixToAdjList(g, G))
+	{
+		cout << "ÈÇªÊé•Ë°®ÂàõÂª∫Â§±Ë¥•ÔºåÊó†Ê≥ïËøõË°åÊ∏∏ËßàÁ∫øË∑ØËßÑÂàí„ÄÇ" << endl;
+		return;
+	}
+	cout << "ÈÇªÊé•Ë°®ÂàõÂª∫ÊàêÂäüÔºåÂÜÖÂÆπÂ¶Ç‰∏ã:" << endl;
 	DispAdj(G);
-
-	cout << "«Î ‰»Î”Œ¿¿œﬂ¬∑∆µ„æ∞µ„√˚≥∆" << endl;
-
-	cout << "	@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ " << endl;
-	cout << "		       –£‘∞æ∞µ„”Œ¿¿œﬂ¬∑≤È—ØπÊªÆ       " << endl;
-	cout << "		@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ " << endl;
-	cout << "		       1  …Ó∂»”≈œ»”Œ¿¿œﬂ¬∑≤È—ØπÊªÆ      " << endl;
-	cout << "		       2  π„∂»”≈œ»”Œ¿¿œﬂ¬∑≤È—ØπÊªÆ     " << endl;
-	cout << "		       0   ∑µªÿ÷˜≤Àµ•          " << endl;
-	cout << "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ " << endl;
+	char startName[20];
+	cout << "ËØ∑ËæìÂÖ•Ê∏∏ËßàÁ∫øË∑ØËµ∑ÁÇπÊôØÁÇπÂêçÁß∞: ";
+	cin >> setw(20) >> startName;
+	int start = LocateSpotPos(g, startName);
+	if (start == -1)
+	{
+		cout << "Êú™ÊâæÂà∞ËØ•Ëµ∑ÁÇπ„ÄÇ" << endl;
+		DestroyAdj(G);
+		return;
+	}
+	int choice = -1;
+	do
+	{
+		static const char *menu[] = {"@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@", "        Ê†°Âõ≠ÊôØÁÇπÊ∏∏ËßàÁ∫øË∑ØÊü•ËØ¢ËßÑÂàí     ", "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@", " 1 Ê∑±Â∫¶‰ºòÂÖàÊ∏∏ËßàÁ∫øË∑ØÊü•ËØ¢ËßÑÂàí         ", " 2 ÂπøÂ∫¶‰ºòÂÖàÊ∏∏ËßàÁ∫øË∑ØÊü•ËØ¢ËßÑÂàí         ", " 0 ËøîÂõû‰∏ªËèúÂçï                       ", "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"};
+		for (const char *line : menu) { cout << line << endl; }
+		cout << "ËØ∑ÈÄâÊã©: ";
+		cin >> choice;
+		switch (choice)
+		{
+		case 1: cout << "Ê∑±Â∫¶‰ºòÂÖàÈÅçÂéÜÁªìÊûú: "; DFS(G, start); cout << endl; break;
+		case 2: cout << "ÂπøÂ∫¶‰ºòÂÖàÈÅçÂéÜÁªìÊûú: "; BFS(G, start); cout << endl; break;
+		case 0: cout << "ËøîÂõû‰∏ªËèúÂçï„ÄÇ" << endl; break;
+		default: cout << "ÂäüËÉΩÁºñÂè∑Êó†Êïà„ÄÇ" << endl; break;
+		}
+	} while (choice != 0);
+	DestroyAdj(G);
 }
 
-// Õºµƒ¡⁄Ω”æÿ’Û¥¥Ω®Õºµƒ¡⁄Ω”±Ì
 bool MatrixToAdjList(MatrixGraph g, AdjGraph *&G)
 {
+	G = new AdjGraph;
+	G->n = g.VexNum;
+	G->e = g.EdgeNum;
+	for (int i = 0; i < g.VexNum; i++)
+	{
+		G->adjlist[i].VexData = g.Vexs[i];
+		G->adjlist[i].count = 0;
+		G->adjlist[i].firstarc = nullptr;
+	}
+	for (int i = 0; i < g.VexNum; i++)
+	{
+		for (int j = g.VexNum - 1; j >= 0; j--)
+		{
+			if (g.Edges[i][j] != INFINITY && g.Edges[i][j] > 0)
+			{
+				ArcNode *p = new ArcNode;
+				p->adjvex = j;
+				p->weight = g.Edges[i][j];
+				p->nextarc = G->adjlist[i].firstarc;
+				G->adjlist[i].firstarc = p;
+			}
+		}
+	}
+	return true;
 }
 
-// œ‘ æ¡⁄Ω”±Ì
 void DispAdj(AdjGraph *G)
 {
+	for (int i = 0; i < G->n; i++)
+	{
+		cout << setw(15) << left << G->adjlist[i].VexData.Name << ": ";
+		for (ArcNode *p = G->adjlist[i].firstarc; p != nullptr; p = p->nextarc)
+		{
+			cout << G->adjlist[p->adjvex].VexData.Name << "(" << p->weight << ") ";
+		}
+		cout << endl;
+	}
 }
-// …Ó∂»”≈œ»±È¿˙À„∑®
+
+void DFSInternal(AdjGraph *G, int v, bool visited[])
+{
+	visited[v] = true;
+	cout << G->adjlist[v].VexData.Name << " ";
+	for (ArcNode *p = G->adjlist[v].firstarc; p != nullptr; p = p->nextarc)
+	{
+		if (!visited[p->adjvex])
+		{
+			DFSInternal(G, p->adjvex, visited);
+		}
+	}
+}
+
 void DFS(AdjGraph *G, int v)
 {
+	bool visited[MAXVEXNUM];
+	memset(visited, false, sizeof(visited));
+	DFSInternal(G, v, visited);
+	for (int i = 0; i < G->n; i++)
+	{
+		if (!visited[i])
+		{
+			DFSInternal(G, i, visited);
+		}
+	}
 }
-// π„∂»”≈œ»±È¿˙À„∑®
+
 void BFS(AdjGraph *G, int v)
 {
+	bool visited[MAXVEXNUM];
+	memset(visited, false, sizeof(visited));
+	queue<int> q;
+	visited[v] = true;
+	q.push(v);
+	while (!q.empty())
+	{
+		int u = q.front();
+		q.pop();
+		cout << G->adjlist[u].VexData.Name << " ";
+		for (ArcNode *p = G->adjlist[u].firstarc; p != nullptr; p = p->nextarc)
+		{
+			if (!visited[p->adjvex])
+			{
+				visited[p->adjvex] = true;
+				q.push(p->adjvex);
+			}
+		}
+	}
+	for (int i = 0; i < G->n; i++)
+	{
+		if (!visited[i])
+		{
+			visited[i] = true;
+			q.push(i);
+			while (!q.empty())
+			{
+				int u2 = q.front();
+				q.pop();
+				cout << G->adjlist[u2].VexData.Name << " ";
+				for (ArcNode *p = G->adjlist[u2].firstarc; p != nullptr; p = p->nextarc)
+				{
+					if (!visited[p->adjvex])
+					{
+						visited[p->adjvex] = true;
+						q.push(p->adjvex);
+					}
+				}
+			}
+		}
+	}
 }
 
-// œ˙ªŸÕºµƒ¡⁄Ω”±Ì
 void DestroyAdj(AdjGraph *&G)
 {
+	if (!G)
+	{
+		return;
+	}
+	for (int i = 0; i < G->n; i++)
+	{
+		ArcNode *p = G->adjlist[i].firstarc;
+		while (p)
+		{
+			ArcNode *tmp = p;
+			p = p->nextarc;
+			delete tmp;
+		}
+		G->adjlist[i].firstarc = nullptr;
+	}
+	delete G;
+	G = nullptr;
 }
 
-// 6
-
-// æ∞µ„◊Ó∂Ã¬∑æ∂≤È—Ø∫Ø ˝
 void ShortestPathQuery(MatrixGraph g)
 {
+	if (g.VexNum == 0)
+	{
+		cout << "ÊöÇÊó†ÊôØÁÇπÂèØËøõË°åÊúÄÁü≠Ë∑ØÂæÑËÆ°ÁÆó„ÄÇ" << endl;
+		return;
+	}
+	int choice = -1;
+	do
+	{
+		static const char *menu[] = {"^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^", "             Ê†°Âõ≠ÊôØÁÇπÊúÄÁü≠Ë∑ØÂæÑÊü•ËØ¢               ", "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^", " 1 Ëø™Êù∞ÊñØÁâπÊãâ(Dijkstra)ÁÆóÊ≥ï                    ", " 2 ÂºóÊ¥õ‰ºäÂæ∑(Floyd)ÁÆóÊ≥ï                         ", " 0 ËøîÂõû‰∏ªËèúÂçï                                  ", "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"};
+		for (const char *line : menu) { cout << line << endl; }
+		cout << "ËØ∑ÈÄâÊã©: ";
+		cin >> choice;
+		switch (choice)
+		{
+		case 1:
+		{
+			char name[20];
+			cout << "ËØ∑ËæìÂÖ•Ëµ∑ÁÇπÊôØÁÇπÂêçÁß∞: ";
+			cin >> setw(20) >> name;
+			int pos = LocateSpotPos(g, name);
+			if (pos == -1)
+			{
+				cout << "Ëµ∑ÁÇπ‰∏çÂ≠òÂú®„ÄÇ" << endl;
+			}
+			else
+			{
+				Dijkstra(g, pos);
+			}
+			break;
+		}
+		case 2: Floyd(g); break;
+		case 0: cout << "ËøîÂõû‰∏ªËèúÂçï„ÄÇ" << endl; break;
+		default: cout << "ÂäüËÉΩÁºñÂè∑Êó†Êïà„ÄÇ" << endl; break;
+		}
+	} while (choice != 0);
 }
 
-// µœΩ‹ÀπÃÿ¿≠À„∑®
 void Dijkstra(MatrixGraph g, int v)
 {
+	int dist[MAXVEXNUM];
+	int path[MAXVEXNUM];
+	int S[MAXVEXNUM];
+	for (int i = 0; i < g.VexNum; i++)
+	{
+		dist[i] = g.Edges[v][i];
+		S[i] = 0;
+		path[i] = (g.Edges[v][i] < INFINITY && i != v) ? v : -1;
+	}
+	dist[v] = 0;
+	S[v] = 1;
+	for (int i = 0; i < g.VexNum - 1; i++)
+	{
+		int min = INFINITY;
+		int u = v;
+		for (int j = 0; j < g.VexNum; j++)
+		{
+			if (!S[j] && dist[j] < min)
+			{
+				u = j;
+				min = dist[j];
+			}
+		}
+		S[u] = 1;
+		for (int k = 0; k < g.VexNum; k++)
+		{
+			if (!S[k] && g.Edges[u][k] < INFINITY && dist[u] + g.Edges[u][k] < dist[k])
+			{
+				dist[k] = dist[u] + g.Edges[u][k];
+				path[k] = u;
+			}
+		}
+	}
+	Disppath(g, dist, path, S, v);
 }
 
-//  ‰≥ˆ◊Ó∂Ã¬∑æ∂
+void PrintPath(MatrixGraph g, int path[], int start, int end)
+{
+	if (start == end)
+	{
+		cout << g.Vexs[start].Name;
+		return;
+	}
+	if (path[end] == -1)
+	{
+		cout << "‰∏çÂ≠òÂú®Ë∑ØÂæÑ";
+		return;
+	}
+	PrintPath(g, path, start, path[end]);
+	cout << " -> " << g.Vexs[end].Name;
+}
+
 void Disppath(MatrixGraph g, int dist[], int path[], int S[], int v)
 {
+	cout << "‰ª•ÊôØÁÇπ " << g.Vexs[v].Name << " ‰∏∫Ëµ∑ÁÇπÁöÑÊúÄÁü≠Ë∑ØÂæÑÁªìÊûúÂ¶Ç‰∏ã:" << endl;
+	for (int i = 0; i < g.VexNum; i++)
+	{
+		if (i == v)
+		{
+			continue;
+		}
+		cout << "Âà∞ÊôØÁÇπ " << g.Vexs[i].Name << " ÁöÑÊúÄÁü≠Ë∑ùÁ¶ª: ";
+		if (dist[i] >= INFINITY)
+		{
+			cout << "‰∏çÂèØËææ" << endl;
+		}
+		else
+		{
+			cout << dist[i] << "  Ë∑ØÂæÑ: ";
+			PrintPath(g, path, v, i);
+			cout << endl;
+		}
+	}
 }
 
-// FloydÀ„∑®£¨ÕÍ≥…–£‘∞æ∞µ„◊Ó∂Ã¬∑æ∂≤È—Øµƒπ¶ƒ‹
 void Floyd(MatrixGraph g)
 {
+	int A[MAXVEXNUM][MAXVEXNUM];
+	int path[MAXVEXNUM][MAXVEXNUM];
+	for (int i = 0; i < g.VexNum; i++)
+	{
+		for (int j = 0; j < g.VexNum; j++)
+		{
+			A[i][j] = g.Edges[i][j];
+			path[i][j] = (i != j && g.Edges[i][j] < INFINITY) ? j : -1;
+		}
+	}
+	for (int k = 0; k < g.VexNum; k++)
+	{
+		for (int i = 0; i < g.VexNum; i++)
+		{
+			for (int j = 0; j < g.VexNum; j++)
+			{
+				if (A[i][k] < INFINITY && A[k][j] < INFINITY && A[i][k] + A[k][j] < A[i][j])
+				{
+					A[i][j] = A[i][k] + A[k][j];
+					path[i][j] = path[i][k];
+				}
+			}
+		}
+	}
+	Dispath(g, A, path);
 }
 
-// 7 £©π‹µ¿œµÕ≥◊Ó”≈≤º…Ë
+void PrintFloydPath(MatrixGraph g, int path[][MAXVEXNUM], int i, int j)
+{
+	cout << g.Vexs[i].Name;
+	int current = i;
+	while (current != j)
+	{
+		current = path[current][j];
+		if (current == -1)
+		{
+			cout << " -> ‰∏çÂèØËææ";
+			return;
+		}
+		cout << " -> " << g.Vexs[current].Name;
+	}
+}
+
+void Dispath(MatrixGraph g, int A[][MAXVEXNUM], int path[][MAXVEXNUM])
+{
+	for (int i = 0; i < g.VexNum; i++)
+	{
+		for (int j = 0; j < g.VexNum; j++)
+		{
+			if (i == j)
+			{
+				continue;
+			}
+			cout << g.Vexs[i].Name << " Âà∞ " << g.Vexs[j].Name << " ÁöÑÊúÄÁü≠Ë∑ùÁ¶ª: ";
+			if (A[i][j] >= INFINITY)
+			{
+				cout << "‰∏çÂèØËææ" << endl;
+			}
+			else
+			{
+				cout << A[i][j] << "  Ë∑ØÂæÑ: ";
+				PrintFloydPath(g, path, i, j);
+				cout << endl;
+			}
+		}
+	}
+}
+
 void PipelineSystemOptimal(MatrixGraph g)
 {
+	if (g.VexNum == 0)
+	{
+		cout << "ÊöÇÊó†ÊôØÁÇπÊï∞ÊçÆÔºåÊó†Ê≥ïËøõË°åÁÆ°ÈÅìÁ≥ªÁªüÂ∏ÉËÆæ„ÄÇ" << endl;
+		return;
+	}
+	int choice = -1;
+	do
+	{
+		static const char *menu[] = {"#############################################", "             Ê†°Âõ≠ÁÆ°ÈÅìÁ≥ªÁªüÊúÄ‰ºòÂ∏ÉËÆæ               ", "#############################################", " 1  ÊôÆÈáåÂßÜ(Prim)ÁÆóÊ≥ï                           ", " 2  ÂÖãÈ≤ÅÊñØÂç°Â∞î(Kruskal)ÁÆóÊ≥ï                    ", " 0  ËøîÂõû‰∏ªËèúÂçï                                 ", "#############################################"};
+		for (const char *line : menu) { cout << line << endl; }
+		cout << "ËØ∑ÈÄâÊã©: ";
+		cin >> choice;
+		switch (choice)
+		{
+		case 1:
+		{
+			char name[20];
+			cout << "ËØ∑ËæìÂÖ•ÁÆ°ÈÅìÁ≥ªÁªüÊúÄ‰ºòÂ∏ÉËÆæËµ∑ÁÇπÊôØÁÇπÂêçÁß∞: ";
+			cin >> setw(20) >> name;
+			int pos = LocateSpotPos(g, name);
+			if (pos == -1)
+			{
+				cout << "Ëµ∑ÁÇπ‰∏çÂ≠òÂú®„ÄÇ" << endl;
+			}
+			else
+			{
+				Prim(g, pos);
+			}
+			break;
+		}
+		case 2: Kruskal(g); break;
+		case 0: cout << "ËøîÂõû‰∏ªËèúÂçï„ÄÇ" << endl; break;
+		default: cout << "ÂäüËÉΩÁºñÂè∑Êó†Êïà„ÄÇ" << endl; break;
+		}
+	} while (choice != 0);
 }
 
 void Prim(MatrixGraph g, int v)
 {
+	if (g.VexNum == 0)
+	{
+		cout << "Âõæ‰∏∫Á©∫ÔºåÊó†Ê≥ïÊâßË°åPrimÁÆóÊ≥ï„ÄÇ" << endl;
+		return;
+	}
+	int lowcost[MAXVEXNUM];
+	int closest[MAXVEXNUM];
+	for (int i = 0; i < g.VexNum; i++)
+	{
+		lowcost[i] = g.Edges[v][i];
+		closest[i] = v;
+	}
+	closest[v] = -1;
+	cout << "PrimÁÆóÊ≥ïÁîüÊàêÁöÑÊúÄÂ∞èÁîüÊàêÊ†ëËæπÂ¶Ç‰∏ã:" << endl;
+	for (int i = 1; i < g.VexNum; i++)
+	{
+		int min = INFINITY;
+		int k = -1;
+		for (int j = 0; j < g.VexNum; j++)
+		{
+			if (closest[j] != -1 && lowcost[j] < min)
+			{
+				min = lowcost[j];
+				k = j;
+			}
+		}
+		if (k == -1)
+		{
+			cout << "ÂõæÂèØËÉΩ‰∏çËøûÈÄöÔºåPrimÁÆóÊ≥ïÊèêÂâçÁªìÊùü„ÄÇ" << endl;
+			return;
+		}
+		cout << g.Vexs[closest[k]].Name << " -- " << g.Vexs[k].Name << " : " << lowcost[k] << endl;
+		closest[k] = -1;
+		for (int j = 0; j < g.VexNum; j++)
+		{
+			if (closest[j] != -1 && g.Edges[k][j] < lowcost[j])
+			{
+				lowcost[j] = g.Edges[k][j];
+				closest[j] = k;
+			}
+		}
+	}
 }
 
 void Kruskal(MatrixGraph g)
 {
+	if (g.VexNum == 0)
+	{
+		cout << "Âõæ‰∏∫Á©∫ÔºåÊó†Ê≥ïÊâßË°åKruskalÁÆóÊ≥ï„ÄÇ" << endl;
+		return;
+	}
+	vector<EdgeType> edges;
+	for (int i = 0; i < g.VexNum; i++)
+	{
+		for (int j = i + 1; j < g.VexNum; j++)
+		{
+			if (g.Edges[i][j] != INFINITY && g.Edges[i][j] > 0)
+			{
+				edges.push_back({i, j, g.Edges[i][j]});
+			}
+		}
+	}
+	if (edges.empty())
+	{
+		cout << "Âõæ‰∏≠Êó†ÊúâÊïàË∑ØÂæÑÔºåÊó†Ê≥ïÊâßË°åKruskalÁÆóÊ≥ï„ÄÇ" << endl;
+		return;
+	}
+	BubbleSort(edges.data(), static_cast<int>(edges.size()));
+	int parent[MAXVEXNUM];
+	for (int i = 0; i < g.VexNum; i++)
+	{
+		parent[i] = -1;
+	}
+	cout << "KruskalÁÆóÊ≥ïÁîüÊàêÁöÑÊúÄÂ∞èÁîüÊàêÊ†ëËæπÂ¶Ç‰∏ã:" << endl;
+	int count = 0;
+	for (size_t i = 0; i < edges.size() && count < g.VexNum - 1; i++)
+	{
+		int u = edges[i].u;
+		int v = edges[i].v;
+		int fu = u;
+		while (parent[fu] != -1) { fu = parent[fu]; }
+		int fv = v;
+		while (parent[fv] != -1) { fv = parent[fv]; }
+		if (fu != fv)
+		{
+			parent[fv] = fu;
+			cout << g.Vexs[u].Name << " -- " << g.Vexs[v].Name << " : " << edges[i].Weight << endl;
+			count++;
+		}
+	}
+	if (count != g.VexNum - 1)
+	{
+		cout << "Âõæ‰∏çËøûÈÄöÔºåÊú™ËÉΩÁîüÊàêÂÆåÊï¥ÁöÑÁîüÊàêÊ†ë„ÄÇ" << endl;
+	}
 }
 
 void BubbleSort(EdgeType R[], int n)
 {
+	for (int i = 0; i < n - 1; i++)
+	{
+		for (int j = 0; j < n - 1 - i; j++)
+		{
+			if (R[j].Weight > R[j + 1].Weight)
+			{
+				EdgeType tmp = R[j];
+				R[j] = R[j + 1];
+				R[j + 1] = tmp;
+			}
+		}
+	}
+}
+
+int CountEdges(MatrixGraph g)
+{
+	int count = 0;
+	for (int i = 0; i < g.VexNum; i++)
+	{
+		for (int j = i + 1; j < g.VexNum; j++)
+		{
+			if (g.Edges[i][j] != INFINITY && g.Edges[i][j] > 0)
+			{
+				count++;
+			}
+		}
+	}
+	return count;
 }
 
 int main()
 {
 	MatrixGraph g;
-	int choice = 0;
+	InitMatrixGraph(g);
+	int choice = -1;
 	do
 	{
 		ShowMenu();
 		cin >> choice;
 		switch (choice)
 		{
-		case 1:
-			//
-			break;
-		case 2:
-			// –£‘∞æ∞µ„ ˝æ›π‹¿Ì
-			cout << "–£‘∞æ∞µ„ ˝æ›π‹¿Ì" << endl;
-			cout << "«Î ‰»Î“™ ‰»Îæ∞µ„ ˝æ›µƒ∏ˆ ˝" << endl;
-			int n;
-			cin >> n;
-			InMultiSpotsData(g, n);
-			break;
-		case 3:
-			// æ∞µ„ΩªÕ® ˝æ›π‹¿Ì
-			cout << "æ∞µ„ΩªÕ® ˝æ›π‹¿Ì" << endl;
-
-			break;
-		case 4:
-			// –£‘∞æ∞µ„–≈œ¢≤È—Ø
-			cout << "–£‘∞æ∞µ„–≈œ¢≤È—Ø" << endl;
-			ShowAllSpotsData(g);
-			break;
-		case 0:
-			cout << "ÕÀ≥ˆœµÕ≥" << endl;
-			break;
-		default:
-			cout << " ‰»Î¥ÌŒÛ£¨«Î—°‘Ò(0~7)" << endl;
-			break;
+		case 1: ManaMapData(g); break;
+		case 2: ManaVertexData(g); break;
+		case 3: ManaRoadData(g); break;
+		case 4: SearchSpotInfor(g); break;
+		case 5: VisitPathPlan(g); break;
+		case 6: ShortestPathQuery(g); break;
+		case 7: PipelineSystemOptimal(g); break;
+		case 0: cout << "ÊÑüË∞¢‰ΩøÁî®Ê≠¶Ê±â‰∏úÊπñÂ≠¶Èô¢Ê†°Âõ≠ÂØºÊ∏∏Á≥ªÁªüÔºåÂÜçËßÅÔºÅ" << endl; break;
+		default: cout << "ËæìÂÖ•ÈîôËØØÔºåËØ∑ÈáçÊñ∞ÈÄâÊã©(0~7)„ÄÇ" << endl; break;
 		}
 	} while (choice != 0);
 	return 0;
 }
+
